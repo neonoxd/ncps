@@ -224,7 +224,7 @@ def main():
 
 	pEnv = ProtonEnv(
 		PROTON=proton_choice[1],
-		WINEPREFIX=compat_choice[2],
+		WINEPREFIX=os.path.join(compat_choice[2], "pfx"),
 		PATHEXTRA=os.path.join(proton_choice[2], "bin"),
 		WINESERVER=os.path.join(proton_choice[2], "wineserver"),
 		WINELOADER=os.path.join(proton_choice[2], "wine"),
