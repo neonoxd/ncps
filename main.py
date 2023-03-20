@@ -1,17 +1,14 @@
-#!/usr/bin/python3
 import glob
 import sys
 import os.path
 import subprocess
 from dataclasses import dataclass
 from pathlib import Path
-from time import sleep
 
 import vdf
 import curses
 
-steam_root = os.path.join(os.getenv("HOME"), ".steam/root")
-steam_root = "./test/steam"
+steam_root = os.getenv("STEAM_HOME", os.path.join(os.getenv("HOME"), ".steam/root"))
 
 
 @dataclass
@@ -24,18 +21,20 @@ class ProtonEnv:
 	WINEDLLPATH: str = None
 
 	def todict(self):
-		d = {}
-		d["PROTON"] = self.PROTON
-		d["PATHEXTRA"] = self.PATHEXTRA
-		d["WINEPREFIX"] = self.WINEPREFIX
-		d["WINESERVER"] = self.WINESERVER
-		d["WINELOADER"] = self.WINELOADER
-		d["WINEDLLPATH"] = self.WINEDLLPATH
-		return d
+		return {
+			"PROTON": self.PROTON,
+			"PATHEXTRA": self.PATHEXTRA,
+			"WINEPREFIX": self.WINEPREFIX,
+			"WINESERVER": self.WINESERVER,
+			"WINELOADER": self.WINELOADER,
+			"WINEDLLPATH": self.WINEDLLPATH
+		}
 
 
 class CMenu:
-	def __init__(self, opts: list, display_fields=[0]):
+	def __init__(self, opts: list, display_fields=None):
+		if display_fields is None:
+			display_fields = [0]
 		self.choice_i = -1
 		self.choice = None
 		if len(opts) == 0:
@@ -158,11 +157,8 @@ def find_compat_dirs():
 	cdata_path = os.path.join(steam_root, "steamapps", "compatdata")
 	files = list(filter(os.path.isdir, glob.glob(cdata_path + "/*")))
 	files.sort(key=lambda x: os.path.getmtime(x))
-	f = [os.path.basename(file) for file in files]
-	print(f"compat appids: {f}")
 
 	scs = parse_shortcuts()
-	print("-----------------")
 
 	dirs = []
 	for comp_dir in files:
@@ -170,10 +166,8 @@ def find_compat_dirs():
 		appname = "UNKNOWN"
 		manifest_path = os.path.join(steam_root, "steamapps", f"appmanifest_{appid}.acf")
 		if appid in scs:
-			#print(f"APPID IN SHORCUTS: {appid}")
 			appname = scs[appid]
 		elif os.path.isfile(manifest_path):
-			#print(f"APPID IN MANIFESTS: {appid}")
 			with open(manifest_path, "r") as manifest_file:
 				lines = manifest_file.readlines()
 				appname_line = list(filter(lambda x: "name" in x, lines))
@@ -183,9 +177,7 @@ def find_compat_dirs():
 					pass
 		else:
 			pass
-			#print(f"APPID NOT FOUND: {appid}")
 		dirs.append((appid, appname, comp_dir))
-	print("------")
 	return dirs
 
 
@@ -230,16 +222,14 @@ def main():
 	if None in [proton_choice, compat_choice]:
 		return
 
-	print("-------------")
-
-	pEnv = ProtonEnv()
-	pEnv.PROTON = proton_choice[1]
-	pEnv.WINEPREFIX = compat_choice[2]
-	pEnv.PATHEXTRA = os.path.join(proton_choice[2], "bin")
-	pEnv.WINESERVER = os.path.join(proton_choice[2], "wineserver")
-	pEnv.WINELOADER = os.path.join(proton_choice[2], "wine")
-	pEnv.WINEDLLPATH = os.path.join(proton_choice[2], "lib", "wine") + ":" + os.path.join(proton_choice[2], "lib64", "wine")
-
+	pEnv = ProtonEnv(
+		PROTON=proton_choice[1],
+		WINEPREFIX=compat_choice[2],
+		PATHEXTRA=os.path.join(proton_choice[2], "bin"),
+		WINESERVER=os.path.join(proton_choice[2], "wineserver"),
+		WINELOADER=os.path.join(proton_choice[2], "wine"),
+		WINEDLLPATH=os.path.join(proton_choice[2], "lib", "wine") + ":" + os.path.join(proton_choice[2], "lib64", "wine")
+	)
 	print(pEnv)
 
 	os_env = dict(os.environ)
