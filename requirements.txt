@@ -1,2 +1,2 @@
-vdf
-curses
+pathlib==1.0.1
+vdf==3.4
