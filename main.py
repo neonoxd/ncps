@@ -1,8 +1,8 @@
+#!/bin/python3
 import glob
 import sys
 import os.path
 import subprocess
-import traceback
 from dataclasses import dataclass
 from pathlib import Path
 
