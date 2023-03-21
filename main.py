@@ -35,6 +35,10 @@ class ProtonEnv:
 
 
 class CMenu:
+	"""
+		Cursed CursesTM menu wrapper
+		Please Don't look
+	"""
 	def __init__(self, list_options: list, display_fields=None):
 		if display_fields is None:
 			display_fields = [0]
@@ -181,13 +185,13 @@ def find_proton_dirs():
 
 	proton_dirs = []
 
-	for dir in found_dirs:
-		p1p = os.path.join(dir, "files")
+	for act_dir in found_dirs:
+		p1p = os.path.join(act_dir, "files")
 		p1 = os.path.isdir(p1p)
-		p2p = os.path.join(dir, "dist")
+		p2p = os.path.join(act_dir, "dist")
 		p2 = os.path.isdir(p2p)
 		if p1 or p2:
-			proton_dirs.append((os.path.basename(dir), dir, p1p if p1 else p2p))
+			proton_dirs.append((os.path.basename(act_dir), act_dir, p1p if p1 else p2p))
 
 	return proton_dirs
 
@@ -286,6 +290,5 @@ def main():
 
 
 if __name__ == "__main__":
-	pass
 	main()
 
