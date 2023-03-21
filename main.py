@@ -8,7 +8,7 @@ from pathlib import Path
 
 import vdf
 import curses
-
+VERSION = "0.1"
 steam_root = os.getenv("STEAM_HOME", os.path.join(os.getenv("HOME"), ".steam/root"))
 
 
@@ -49,6 +49,7 @@ class CMenu:
 			return
 
 		stdscr = curses.initscr()
+		stdscr.addstr(0, 0, f"ncps v{VERSION}")
 		YMAX, XMAX = stdscr.getmaxyx()
 
 		X_MARGIN = 12
