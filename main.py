@@ -12,28 +12,6 @@ VERSION = "0.2"
 steam_root = os.getenv("STEAM_HOME", os.path.join(os.getenv("HOME", "."), ".steam/root"))
 
 
-@dataclass
-class ProtonEnv:
-	PROTON: str = None
-	PATHEXTRA: str = None
-	WINEPREFIX: str = None
-	WINESERVER: str = None
-	WINELOADER: str = None
-	WINEDLLPATH: str = None
-	APPID: str = None
-
-	def todict(self):
-		return {
-			"PROTON": self.PROTON,
-			"PATHEXTRA": self.PATHEXTRA,
-			"WINEPREFIX": self.WINEPREFIX,
-			"WINESERVER": self.WINESERVER,
-			"WINELOADER": self.WINELOADER,
-			"WINEDLLPATH": self.WINEDLLPATH,
-			"APPID": self.APPID
-		}
-
-
 class CMenu:
 	"""
 		Cursed CursesTM menu wrapper
@@ -252,44 +230,44 @@ def find_shortcuts():
 
 
 def main():
-	fpd = find_proton_dirs()
-	fcd = find_compat_dirs()
+	proton_dirs = find_proton_dirs()
+	compat_dirs = find_compat_dirs()
 
 	if len(sys.argv) < 2:
 		print("ncps: missing command")
-		print("usage: ncps [-c] command")
+		print(f"usage: {os.path.basename(sys.argv[0])} [-c] command")
 		print("------------------------")
-		print(f"{len(fpd)} Proton dirs found")
-		print(f"{len(fcd)} prefix dirs found")
-		print("last prefixes created:")
-		print("\t"+"\n\t".join([f"{d[0]} - {d[1]}" for d in fcd][:3]))
-		exit(0)
+		print(f"{len(proton_dirs)} Proton dirs found")
+		print(f"{len(compat_dirs)} prefix dirs found")
+		if len(compat_dirs):
+			print("last prefixes created:")
+			print("\t"+"\n\t".join([f"{d[0]} - {d[1]}" for d in compat_dirs][:3]))
+			exit(0)
 
-	proton_choice = CMenu(fpd, [0, 1], title="Please select a Proton version to use").get_choice()
-	compat_choice = CMenu(fcd, [0, 1, 2], title="Please select a prefix to use").get_choice()
+	proton_choice = CMenu(proton_dirs, [0, 1], title="Please select a Proton version to use").get_choice()
+	compat_choice = CMenu(compat_dirs, [0, 1, 2], title="Please select a prefix to use").get_choice()
 
 	if None in [proton_choice, compat_choice]:
 		return
 
-	pcp1 = os.path.abspath(proton_choice[1])
-	pcp2 = os.path.abspath(proton_choice[2])
-	cc_dir = os.path.abspath(compat_choice[2])
+	proton_root = os.path.abspath(proton_choice[1])
+	proton_home = os.path.abspath(proton_choice[2])
+	prefix_root = os.path.abspath(compat_choice[2])
 
-	pEnv = ProtonEnv(
-		PROTON=pcp1,
-		WINEPREFIX=os.path.join(cc_dir, "pfx"),
-		PATHEXTRA=os.path.join(pcp2, "bin"),
-		WINESERVER=os.path.join(pcp2, "wineserver"),
-		WINELOADER=os.path.join(pcp2, "wine"),
-		WINEDLLPATH=os.path.join(pcp2, "lib", "wine") + ":" + os.path.join(proton_choice[2], "lib64", "wine"),
-		APPID=compat_choice[0]
-	)
-	print(pEnv)
+	ncps_env = {
+		"PROTON": 		proton_root,
+		"WINEPREFIX": 	os.path.join(prefix_root, "pfx"),
+		"PATHEXTRA": 	os.path.join(proton_home, "bin"),
+		"WINESERVER": 	os.path.join(proton_home, "wineserver"),
+		"WINELOADER": 	os.path.join(proton_home, "wine"),
+		"WINEDLLPATH": 	os.path.join(proton_home, "lib", "wine") + ":" + os.path.join(proton_choice[2], "lib64", "wine"),
+		"APPID": 		compat_choice[0]
+	}
 
 	os_env = dict(os.environ)
-	os_env.update(pEnv.todict())
-	print("------------- END OF NCPS -------------")
+	os_env.update(ncps_env)
 
+	# TODO: proper arg parsing
 	if sys.argv[1] != "-c":
 		p = subprocess.Popen([*sys.argv[1:]], env=os_env)
 	else:
