@@ -8,8 +8,8 @@ from pathlib import Path
 
 import vdf
 import curses
-VERSION = "0.1"
-steam_root = os.getenv("STEAM_HOME", os.path.join(os.getenv("HOME"), ".steam/root"))
+VERSION = "0.2"
+steam_root = os.getenv("STEAM_HOME", os.path.join(os.getenv("HOME", "."), ".steam/root"))
 
 
 @dataclass
@@ -39,7 +39,7 @@ class CMenu:
 		Cursed CursesTM menu wrapper
 		Please Don't look
 	"""
-	def __init__(self, list_options: list, display_fields=None):
+	def __init__(self, list_options: list, display_fields=None, title=None):
 		if display_fields is None:
 			display_fields = [0]
 		self.choice_i = -1
@@ -49,8 +49,12 @@ class CMenu:
 			return
 
 		stdscr = curses.initscr()
+		curses.curs_set(0)
 		stdscr.addstr(0, 0, f"ncps v{VERSION}")
 		YMAX, XMAX = stdscr.getmaxyx()
+
+		if title:
+			stdscr.addstr(1, int(XMAX/2) - int(len(title)/2), f"{title}")
 
 		X_MARGIN = 12
 		X_OFFSET = 6
@@ -182,7 +186,7 @@ def find_proton_dirs():
 
 	found_dirs = list(filter(os.path.isdir, glob.glob(comptools_path + "/*")))
 	found_dirs += list(filter(os.path.isdir, glob.glob(common_path + "/Proton*")))
-	found_dirs.sort(key=lambda x: os.path.getmtime(x))
+	found_dirs.sort(key=lambda x: os.path.getmtime(x), reverse=True)
 
 	proton_dirs = []
 
@@ -200,7 +204,7 @@ def find_proton_dirs():
 def find_compat_dirs():
 	cdata_path = os.path.join(steam_root, "steamapps", "compatdata")
 	files = list(filter(os.path.isdir, glob.glob(cdata_path + "/*")))
-	files.sort(key=lambda x: os.path.getmtime(x))
+	files.sort(key=lambda x: os.path.getmtime(x), reverse=True)
 
 	scs = parse_shortcuts()
 
@@ -252,14 +256,17 @@ def main():
 	fcd = find_compat_dirs()
 
 	if len(sys.argv) < 2:
-		print(f"{len(fpd)} proton dirs found")
-		print(f"{len(fcd)} compat dirs found")
-		print("proton dirs:")
-		print("\n".join([d[1] for d in fpd]))
+		print("ncps: missing command")
+		print("usage: ncps [-c] command")
+		print("------------------------")
+		print(f"{len(fpd)} Proton dirs found")
+		print(f"{len(fcd)} prefix dirs found")
+		print("last prefixes created:")
+		print("\t"+"\n\t".join([f"{d[0]} - {d[1]}" for d in fcd][:3]))
 		exit(0)
 
-	proton_choice = CMenu(fpd, [0, 1]).get_choice()
-	compat_choice = CMenu(fcd, [0, 1, 2]).get_choice()
+	proton_choice = CMenu(fpd, [0, 1], title="Please select a Proton version to use").get_choice()
+	compat_choice = CMenu(fcd, [0, 1, 2], title="Please select a prefix to use").get_choice()
 
 	if None in [proton_choice, compat_choice]:
 		return
