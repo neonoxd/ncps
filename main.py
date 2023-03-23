@@ -130,7 +130,7 @@ class CMenu:
 				choice = _highlight
 				self.choice_i = choice
 				self.choice = list_options[(_current_page * PAGE_SIZE) + choice]
-
+		stdscr.clear()
 		curses.endwin()
 
 	def get_choice_i(self):
