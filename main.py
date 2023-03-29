@@ -208,7 +208,7 @@ def find_compat_dirs():
 
 	scs = parse_shortcuts()
 	aqac = read_quick_cache()
-	afc = read_full_cache()
+	afc = None
 
 	dirs = []
 	for comp_dir in files:
@@ -227,13 +227,16 @@ def find_compat_dirs():
 					pass
 		elif appid in aqac:
 			appname = aqac[appid]
-		elif afc != {}:
-			all_apps = afc["applist"]["apps"]
-			for app_entry in all_apps:
-				if str(app_entry["appid"]) == appid and app_entry["name"] != "":
-					appname = f'*{app_entry["name"]}'
-					aqac[str(app_entry["appid"])] = appname
-					break
+		else:
+			if afc is None:
+				afc = read_full_cache()
+			if afc != {}:
+				all_apps = afc["applist"]["apps"]
+				for app_entry in all_apps:
+					if str(app_entry["appid"]) == appid and app_entry["name"] != "":
+						appname = f'*{app_entry["name"]}'
+						aqac[str(app_entry["appid"])] = appname
+						break
 		dirs.append((appid, appname, comp_dir))
 	if aqac != {}:
 		with open(appid_quick_access_cache_path, "w") as f:
@@ -275,7 +278,7 @@ def refresh_appid_cache(force=False):
 
 
 def main():
-	if sys.argv[1] == "-r":
+	if len(sys.argv) > 1 and sys.argv[1] == "-r":
 		refresh_appid_cache(True)
 		find_compat_dirs()
 		exit(0)
