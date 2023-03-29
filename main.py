@@ -313,13 +313,13 @@ def main():
 	os_env.update(ncps_env)
 
 	# TODO: proper arg parsing
-	if sys.argv[1] != "-r":
+	if sys.argv[1] == "-r":
 		refresh_appid_cache(True)
-	elif sys.argv[1] != "-c":
-		p = subprocess.Popen([*sys.argv[1:]], env=os_env)
+	elif sys.argv[1] == "-c":
+		p = subprocess.Popen([*sys.argv[2:]], env=os_env, shell=True)
 		p.communicate()
 	else:
-		p = subprocess.Popen([*sys.argv[2:]], env=os_env, shell=True)
+		p = subprocess.Popen([*sys.argv[1:]], env=os_env)
 		p.communicate()
 
 
