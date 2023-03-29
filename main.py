@@ -186,6 +186,7 @@ def find_proton_dirs():
 
 
 def read_quick_cache():
+	print("reading quick cache...")
 	if os.path.isfile(appid_quick_access_cache_path):
 		with open(appid_quick_access_cache_path) as f:
 			return json.loads(f.read())
@@ -194,6 +195,7 @@ def read_quick_cache():
 
 
 def read_full_cache():
+	print("reading full cache...")
 	if os.path.isfile(appid_full_cache_path):
 		with open(appid_full_cache_path) as f:
 			return json.loads(f.read())
@@ -209,6 +211,7 @@ def find_compat_dirs():
 	scs = parse_shortcuts()
 	aqac = read_quick_cache()
 	afc = None
+	updated = False
 
 	dirs = []
 	for comp_dir in files:
@@ -236,9 +239,11 @@ def find_compat_dirs():
 					if str(app_entry["appid"]) == appid and app_entry["name"] != "":
 						appname = f'*{app_entry["name"]}'
 						aqac[str(app_entry["appid"])] = appname
+						updated = True
 						break
 		dirs.append((appid, appname, comp_dir))
-	if aqac != {}:
+	if aqac != {} and updated:
+		print("updating quick cache...")
 		with open(appid_quick_access_cache_path, "w") as f:
 			f.write(json.dumps(aqac))
 	return dirs
