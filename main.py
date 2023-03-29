@@ -115,11 +115,25 @@ class CMenu:
 					_highlight = n_choices - 1
 				else:
 					_highlight -= 1
+			elif _pressed == 339:
+				if _highlight - 5 < 0:
+					_highlight = 0
+				else:
+					_highlight -= 5
+			elif _pressed == curses.KEY_HOME:
+				_highlight = 0
 			elif _pressed == curses.KEY_DOWN:
 				if _highlight + 1 == n_choices:
 					_highlight = 0
 				else:
 					_highlight += 1
+			elif _pressed == curses.KEY_END:
+				_highlight = n_choices - 1
+			elif _pressed == 338:
+				if _highlight + 5 >= n_choices:
+					_highlight = n_choices - 1
+				else:
+					_highlight += 5
 			elif _pressed == curses.KEY_LEFT:
 				if _current_page - 1 >= 0:
 					_current_page -= 1
@@ -128,10 +142,10 @@ class CMenu:
 				if _current_page + 1 < _pages:
 					_current_page += 1
 					_highlight = 0
-			elif _pressed == 27:
+			elif _pressed in [27, 113]: # esc
 				curses.endwin()
 				exit(0)
-			elif _pressed in [10, 113]:
+			elif _pressed == 10:
 				_choice_made = True
 				choice = _highlight
 				self.choice_i = choice
@@ -164,6 +178,35 @@ def lower_dict(d):
 	return {k.lower(): _lower_value(v) for k, v in d.items()}
 
 
+def refresh_appid_cache(force=False):
+	print("refreshing appid cache...")
+	url = "http://api.steampowered.com/ISteamApps/GetAppList/v0002/?format=json"
+	os.makedirs(config_dir, exist_ok=True)
+	if force: # or file older than x
+		resp = requests.get(url)
+		js = json.loads(resp.content.decode())
+		with open(appid_full_cache_path, "w") as f:
+			f.write(json.dumps(js, indent=2))
+
+
+def read_quick_cache():
+	print("reading quick cache...")
+	if os.path.isfile(appid_quick_access_cache_path):
+		with open(appid_quick_access_cache_path) as f:
+			return json.loads(f.read())
+	else:
+		return {}
+
+
+def read_full_cache():
+	print("reading full cache...")
+	if os.path.isfile(appid_full_cache_path):
+		with open(appid_full_cache_path) as f:
+			return json.loads(f.read())
+	else:
+		return {}
+
+
 def find_proton_dirs():
 	common_path = os.path.join(steam_root, "steamapps", "common")
 	comptools_path = os.path.join(steam_root, "compatibilitytools.d")
@@ -183,24 +226,6 @@ def find_proton_dirs():
 			proton_dirs.append((os.path.basename(act_dir), act_dir, p1p if p1 else p2p))
 
 	return proton_dirs
-
-
-def read_quick_cache():
-	print("reading quick cache...")
-	if os.path.isfile(appid_quick_access_cache_path):
-		with open(appid_quick_access_cache_path) as f:
-			return json.loads(f.read())
-	else:
-		return {}
-
-
-def read_full_cache():
-	print("reading full cache...")
-	if os.path.isfile(appid_full_cache_path):
-		with open(appid_full_cache_path) as f:
-			return json.loads(f.read())
-	else:
-		return {}
 
 
 def find_compat_dirs():
@@ -271,17 +296,6 @@ def find_shortcuts():
 	return [os.path.abspath(sc) for sc in shortcuts]
 
 
-def refresh_appid_cache(force=False):
-	print("refreshing appid cache...")
-	url = "http://api.steampowered.com/ISteamApps/GetAppList/v0002/?format=json"
-	os.makedirs(config_dir, exist_ok=True)
-	if force: # or file older than x
-		resp = requests.get(url)
-		js = json.loads(resp.content.decode())
-		with open(appid_full_cache_path, "w") as f:
-			f.write(json.dumps(js, indent=2))
-
-
 def main():
 	if len(sys.argv) > 1 and sys.argv[1] == "-r":
 		refresh_appid_cache(True)
@@ -303,9 +317,11 @@ def main():
 			exit(0)
 
 	proton_choice = CMenu(proton_dirs, [0, 1], title="Please select a Proton version to use").get_choice()
-	compat_choice = CMenu(compat_dirs, [0, 1, 2], title="Please select a prefix to use").get_choice()
+	if not proton_choice:
+		return
 
-	if None in [proton_choice, compat_choice]:
+	compat_choice = CMenu(compat_dirs, [0, 1, 2], title="Please select a prefix to use").get_choice()
+	if not compat_choice:
 		return
 
 	proton_root = os.path.abspath(proton_choice[1])
