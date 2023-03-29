@@ -275,6 +275,11 @@ def refresh_appid_cache(force=False):
 
 
 def main():
+	if sys.argv[1] == "-r":
+		refresh_appid_cache(True)
+		find_compat_dirs()
+		exit(0)
+
 	proton_dirs = find_proton_dirs()
 	compat_dirs = find_compat_dirs()
 
@@ -312,10 +317,7 @@ def main():
 	os_env = dict(os.environ)
 	os_env.update(ncps_env)
 
-	# TODO: proper arg parsing
-	if sys.argv[1] == "-r":
-		refresh_appid_cache(True)
-	elif sys.argv[1] == "-c":
+	if sys.argv[1] == "-c":
 		p = subprocess.Popen([*sys.argv[2:]], env=os_env, shell=True)
 		p.communicate()
 	else:
@@ -325,4 +327,3 @@ def main():
 
 if __name__ == "__main__":
 	main()
-
