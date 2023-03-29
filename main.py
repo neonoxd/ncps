@@ -1,15 +1,21 @@
 #!/bin/python3
+import curses
 import glob
-import sys
+import json
 import os.path
 import subprocess
-from dataclasses import dataclass
+import sys
 from pathlib import Path
 
+import requests
 import vdf
-import curses
-VERSION = "0.2"
-steam_root = os.getenv("STEAM_HOME", os.path.join(os.getenv("HOME", "."), ".steam/root"))
+
+VERSION = "0.3"
+homedir = os.getenv("HOME", ".")
+steam_root = os.getenv("STEAM_HOME", os.path.join(homedir, ".steam/root"))
+config_dir = os.path.join(homedir, ".config", "ncps")
+appid_full_cache_path = os.path.join(config_dir, "appids.json")
+appid_quick_access_cache_path = os.path.join(config_dir, "quick_appids.json")
 
 
 class CMenu:
@@ -179,12 +185,30 @@ def find_proton_dirs():
 	return proton_dirs
 
 
+def read_quick_cache():
+	if os.path.isfile(appid_quick_access_cache_path):
+		with open(appid_quick_access_cache_path) as f:
+			return json.loads(f.read())
+	else:
+		return {}
+
+
+def read_full_cache():
+	if os.path.isfile(appid_quick_access_cache_path):
+		with open(appid_full_cache_path) as f:
+			return json.loads(f.read())
+	else:
+		return {}
+
+
 def find_compat_dirs():
 	cdata_path = os.path.join(steam_root, "steamapps", "compatdata")
 	files = list(filter(os.path.isdir, glob.glob(cdata_path + "/*")))
 	files.sort(key=lambda x: os.path.getmtime(x), reverse=True)
 
 	scs = parse_shortcuts()
+	aqac = read_quick_cache()
+	afc = read_full_cache()
 
 	dirs = []
 	for comp_dir in files:
@@ -201,9 +225,19 @@ def find_compat_dirs():
 					appname = appname_line[0].split("\t")[-1][1:-2]
 				except:
 					pass
-		else:
-			pass
+		elif appid in aqac:
+			appname = aqac[appid]
+		elif afc != {}:
+			all_apps = afc["applist"]["apps"]
+			for app_entry in all_apps:
+				if str(app_entry["appid"]) == appid and app_entry["name"] != "":
+					appname = f'*{app_entry["name"]}'
+					aqac[str(app_entry["appid"])] = appname
+					break
 		dirs.append((appid, appname, comp_dir))
+	if aqac != {}:
+		with open(appid_quick_access_cache_path, "w") as f:
+			f.write(json.dumps(aqac))
 	return dirs
 
 
@@ -227,6 +261,17 @@ def find_shortcuts():
 	udata_path = os.path.join(steam_root, "userdata")
 	shortcuts = list(filter(os.path.isfile, glob.glob(udata_path + "/*/config/shortcuts.vdf")))
 	return [os.path.abspath(sc) for sc in shortcuts]
+
+
+def refresh_appid_cache(force=False):
+	print("refreshing appid cache...")
+	url = "http://api.steampowered.com/ISteamApps/GetAppList/v0002/?format=json"
+	os.makedirs(config_dir, exist_ok=True)
+	if force: # or file older than x
+		resp = requests.get(url)
+		js = json.loads(resp.content.decode())
+		with open(appid_full_cache_path, "w") as f:
+			f.write(json.dumps(js, indent=2))
 
 
 def main():
