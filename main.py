@@ -194,7 +194,7 @@ def read_quick_cache():
 
 
 def read_full_cache():
-	if os.path.isfile(appid_quick_access_cache_path):
+	if os.path.isfile(appid_full_cache_path):
 		with open(appid_full_cache_path) as f:
 			return json.loads(f.read())
 	else:
