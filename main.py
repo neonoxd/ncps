@@ -266,10 +266,11 @@ def find_compat_dirs():
 		elif appid in aqac:
 			appname = aqac[appid]
 		else:
-			if afc is None \
-					and (os.path.getctime(comp_dir) > os.path.getmtime(appid_quick_access_cache_path)
-						 or os.path.getmtime(appid_full_cache_path) > os.path.getmtime(appid_quick_access_cache_path)):
-				afc = read_full_cache()
+			if afc is None:
+				if not os.path.isfile(appid_quick_access_cache_path) \
+						or os.path.getctime(comp_dir) > os.path.getmtime(appid_quick_access_cache_path) \
+						or os.path.getmtime(appid_full_cache_path) > os.path.getmtime(appid_quick_access_cache_path):
+					afc = read_full_cache()
 			if afc is not None and afc != {}:
 				all_apps = afc["applist"]["apps"]
 				for app_entry in all_apps:
