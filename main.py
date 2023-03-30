@@ -5,17 +5,19 @@ import json
 import os.path
 import subprocess
 import sys
-from pathlib import Path
-
 import requests
 import vdf
+from pathlib import Path
 
 VERSION = "0.3"
+
 homedir = os.getenv("HOME", ".")
 steam_root = os.getenv("STEAM_HOME", os.path.join(homedir, ".steam/root"))
 config_dir = os.path.join(homedir, ".config", "ncps")
+
 appid_full_cache_path = os.path.join(config_dir, "appids.json")
 appid_quick_access_cache_path = os.path.join(config_dir, "quick_appids.json")
+last_env_path = os.path.join(config_dir, "last.json")
 
 
 class CMenu:
@@ -296,57 +298,85 @@ def find_shortcuts():
 	return [os.path.abspath(sc) for sc in shortcuts]
 
 
+def do_choice(proton_dirs, compat_dirs):
+	proton_choice = CMenu(proton_dirs, [0, 1], title="Please select a Proton version to use").get_choice()
+	if not proton_choice:
+		exit(1)
+
+	compat_choice = CMenu(compat_dirs, [0, 1, 2], title="Please select a prefix to use").get_choice()
+	if not compat_choice:
+		exit(1)
+
+	return proton_choice, compat_choice
+
+
+def save_env(ncps_env):
+	with open(last_env_path, "w") as f:
+		f.write(json.dumps(ncps_env, indent=2))
+
+
+def load_env(path=None):
+	_path = path if path is not None else last_env_path
+	with open(_path, "r") as f:
+		return json.loads(f.read())
+
+
+def create_env(proton_choice, compat_choice):
+	proton_root = os.path.abspath(proton_choice[1])
+	proton_home = os.path.abspath(proton_choice[2])
+	prefix_root = os.path.abspath(compat_choice[2])
+
+	return {
+		"PROTON": proton_root,
+		"WINEPREFIX": os.path.join(prefix_root, "pfx"),
+		"PATHEXTRA": os.path.join(proton_home, "bin"),
+		"WINESERVER": os.path.join(proton_home, "wineserver"),
+		"WINELOADER": os.path.join(proton_home, "wine"),
+		"WINEDLLPATH": os.path.join(proton_home, "lib", "wine") + ":" + os.path.join(proton_choice[2], "lib64", "wine"),
+		"APPID": compat_choice[0]
+	}
+
+
+def execute_with_env(ncps_env, args, shell_mode=False):
+	os_env = dict(os.environ)
+	os_env.update(ncps_env)
+	p = subprocess.Popen([*args], env=os_env, shell=shell_mode)
+	p.communicate()
+
+
 def main():
-	if len(sys.argv) > 1 and sys.argv[1] == "-r":
-		refresh_appid_cache(True)
-		find_compat_dirs()
-		exit(0)
-
-	proton_dirs = find_proton_dirs()
-	compat_dirs = find_compat_dirs()
-
 	if len(sys.argv) < 2:
 		print("ncps: missing command")
 		print(f"usage: {os.path.basename(sys.argv[0])} [-c] command")
 		print("------------------------")
+
+		proton_dirs = find_proton_dirs()
+		compat_dirs = find_compat_dirs()
 		print(f"{len(proton_dirs)} Proton dirs found")
 		print(f"{len(compat_dirs)} prefix dirs found")
 		if len(compat_dirs):
 			print("last prefixes created:")
 			print("\t"+"\n\t".join([f"{d[0]} - {d[1]}" for d in compat_dirs][:3]))
 			exit(0)
-
-	proton_choice = CMenu(proton_dirs, [0, 1], title="Please select a Proton version to use").get_choice()
-	if not proton_choice:
-		return
-
-	compat_choice = CMenu(compat_dirs, [0, 1, 2], title="Please select a prefix to use").get_choice()
-	if not compat_choice:
-		return
-
-	proton_root = os.path.abspath(proton_choice[1])
-	proton_home = os.path.abspath(proton_choice[2])
-	prefix_root = os.path.abspath(compat_choice[2])
-
-	ncps_env = {
-		"PROTON": 		proton_root,
-		"WINEPREFIX": 	os.path.join(prefix_root, "pfx"),
-		"PATHEXTRA": 	os.path.join(proton_home, "bin"),
-		"WINESERVER": 	os.path.join(proton_home, "wineserver"),
-		"WINELOADER": 	os.path.join(proton_home, "wine"),
-		"WINEDLLPATH": 	os.path.join(proton_home, "lib", "wine") + ":" + os.path.join(proton_choice[2], "lib64", "wine"),
-		"APPID": 		compat_choice[0]
-	}
-
-	os_env = dict(os.environ)
-	os_env.update(ncps_env)
-
-	if sys.argv[1] == "-c":
-		p = subprocess.Popen([*sys.argv[2:]], env=os_env, shell=True)
-		p.communicate()
 	else:
-		p = subprocess.Popen([*sys.argv[1:]], env=os_env)
-		p.communicate()
+		if sys.argv[1] == "-r":
+			refresh_appid_cache(True)
+			find_compat_dirs()
+			exit(0)
+
+		proton_dirs = find_proton_dirs()
+		compat_dirs = find_compat_dirs()
+
+		proton_choice, compat_choice = do_choice(proton_dirs, compat_dirs)
+
+		ncps_env = create_env(proton_choice, compat_choice)
+
+		save_env(ncps_env)
+
+		if sys.argv[1] == "-c":
+			execute_with_env(ncps_env, sys.argv[2:], True)
+		else:
+			execute_with_env(ncps_env, sys.argv[1:])
 
 
 if __name__ == "__main__":
