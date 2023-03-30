@@ -260,7 +260,7 @@ def find_compat_dirs():
 		else:
 			if afc is None and os.path.getctime(comp_dir) > os.path.getmtime(appid_quick_access_cache_path):
 				afc = read_full_cache()
-			if afc != {}:
+			if afc is not None and afc != {}:
 				all_apps = afc["applist"]["apps"]
 				for app_entry in all_apps:
 					if str(app_entry["appid"]) == appid and app_entry["name"] != "":
