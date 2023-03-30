@@ -190,9 +190,9 @@ def older_than_x_days(file, days=1):
 
 
 def refresh_appid_cache(force=False):
-	print("refreshing appid cache...")
 	url = "http://api.steampowered.com/ISteamApps/GetAppList/v0002/?format=json"
-	if force or older_than_x_days(appid_full_cache_path):
+	if force or not os.path.isfile(appid_full_cache_path) or older_than_x_days(appid_full_cache_path):
+		print("refreshing appid cache...")
 		resp = requests.get(url)
 		js = json.loads(resp.content.decode())
 		with open(appid_full_cache_path, "w") as f:
@@ -279,6 +279,7 @@ def find_compat_dirs():
 						updated = True
 						break
 		dirs.append((appid, appname, comp_dir))
+
 	Path(appid_quick_access_cache_path).touch()
 	if aqac != {} and updated:
 		print("updating quick cache...")
