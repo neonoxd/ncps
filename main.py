@@ -5,6 +5,8 @@ import json
 import os.path
 import subprocess
 import sys
+import time
+
 import requests
 import vdf
 from pathlib import Path
@@ -18,6 +20,8 @@ config_dir = os.path.join(homedir, ".config", "ncps")
 appid_full_cache_path = os.path.join(config_dir, "appids.json")
 appid_quick_access_cache_path = os.path.join(config_dir, "quick_appids.json")
 last_env_path = os.path.join(config_dir, "last.json")
+
+os.makedirs(config_dir, exist_ok=True)
 
 
 class CMenu:
@@ -180,11 +184,15 @@ def lower_dict(d):
 	return {k.lower(): _lower_value(v) for k, v in d.items()}
 
 
+def older_than_x_days(file, days=1):
+	file_time = os.path.getmtime(file)
+	return (time.time() - file_time) / 3600 > 24 * days
+
+
 def refresh_appid_cache(force=False):
 	print("refreshing appid cache...")
 	url = "http://api.steampowered.com/ISteamApps/GetAppList/v0002/?format=json"
-	os.makedirs(config_dir, exist_ok=True)
-	if force: # or file older than x
+	if force or older_than_x_days(appid_full_cache_path):
 		resp = requests.get(url)
 		js = json.loads(resp.content.decode())
 		with open(appid_full_cache_path, "w") as f:
@@ -364,8 +372,9 @@ def main():
 	else:
 		if sys.argv[1] == "-r":
 			refresh_appid_cache(True)
-			find_compat_dirs()
 			exit(0)
+		else:
+			refresh_appid_cache()
 
 		proton_dirs = find_proton_dirs()
 		compat_dirs = find_compat_dirs()
