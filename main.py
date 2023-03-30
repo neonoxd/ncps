@@ -269,6 +269,7 @@ def find_compat_dirs():
 						updated = True
 						break
 		dirs.append((appid, appname, comp_dir))
+	Path(appid_quick_access_cache_path).touch()
 	if aqac != {} and updated:
 		print("updating quick cache...")
 		with open(appid_quick_access_cache_path, "w") as f:
